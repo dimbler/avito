@@ -21,12 +21,13 @@ def dacha():
     r = requests.get(url_dacha)
     items = r.json()
     if items:
-        for item in items:
-            data.append({'title':'<a href="https://avito.ru{}">{}</a>'.format(item.get['url'], item.get['title']),
-                         'price':item.get['pricePure'],
-                         'metro':item.get['address'],
-                         'photo':get_file("http:{}".format(item.get['image']))
+        for item in items.get('items', []):
+            data.append({'title':'<a href="https://avito.ru{}">{}</a>'.format(item.get('url'), item.get('title')),
+                         'price':item.get('pricePure'),
+                         'metro':item.get('address'),
+                         'photo':get_file("http:{}".format(item.get('image')))
                          })
+    return  data
 
 
 def sendmail(me, you, list_items):
@@ -179,4 +180,6 @@ def velo():
         print (list_items)
 
 if __name__ == '__main__':
-    dacha()
+    list_dacha = dacha()
+    if list_dacha:
+        sendmail('dimbler@gmail.com', 'dimbler@gmail.com', list_dacha)
