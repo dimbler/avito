@@ -15,6 +15,20 @@ from email.mime.image import MIMEImage
 
 from email.utils import make_msgid
 
+def dacha():
+    data = []
+    url_dacha = """https://www.avito.ru/map/items?s_trg=3&map=0&s=101&categoryId=25&params[202]=1065&params[528]=5476&priceMax=60000&searchArea%5BlatBottom%5D=55.72005475979617&searchArea%5BlonLeft%5D=37.274738034793494&searchArea%5BlatTop%5D=55.79468995796127&searchArea%5BlonRight%5D=37.42367475552823&viewPort%5Bwidth%5D=1015&viewPort%5Bheight%5D=902&page=1&limit=10"""
+    r = requests.get(url_dacha)
+    items = r.json()
+    if items:
+        for item in items:
+            data.append({'title':'<a href="https://avito.ru{}">{}</a>'.format(item.get['url'], item.get['title']),
+                         'price':item.get['pricePure'],
+                         'metro':item.get['address'],
+                         'photo':get_file("http:{}".format(item.get['image']))
+                         })
+
+
 def sendmail(me, you, list_items):
     # Create message container - the correct MIME type is multipart/alternative.
     msg = MIMEMultipart('related')
@@ -143,7 +157,7 @@ def image_base64(im):
 def image_formatter(im):
     return f'<img src="data:image/jpeg;base64,{image_base64(im)}">'
 
-def main():
+def velo():
     url = "https://avito.ru/moskva?s_trg=3&q=author"
     base_url = "https://avito.ru/moskva?"
     page_part = "p="
@@ -165,4 +179,4 @@ def main():
         print (list_items)
 
 if __name__ == '__main__':
-    main()
+    dacha()
