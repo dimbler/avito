@@ -14,6 +14,10 @@ from email.mime.image import MIMEImage
 from email.mime.audio import MIMEAudio
 from email.mime.base import MIMEBase
 import pickle
+from PIL import Image
+from io import BytesIO
+
+from email.utils import make_msgid
 
 SCOPES = 'https://www.googleapis.com/auth/gmail.send'
 CLIENT_SECRET_FILE = 'client_secret.json'
@@ -80,7 +84,7 @@ def CreateMessageHtml(sender, to, subject, msgPlain):
     return {'raw': base64.urlsafe_b64encode(message.as_string().encode('UTF-8')).decode('ascii')}
 
 def createMessageWithAttachment(
-        sender, to, subject, message_text, file):
+        sender, to, subject, list_items):
     """Create a message for an email.
 
     Args:
@@ -98,13 +102,27 @@ def createMessageWithAttachment(
     message['from'] = sender
     message['subject'] = subject
 
-    msg = MIMEText(message_text)
-    message.attach(msg)
+    #msg = MIMEText(message_text)
+    #message.attach(msg)
 
-    content_type, encoding = mimetypes.guess_type(file)
+    html = """<b>Finded bycles in AVITO <br><table>"""
+    for item in list_items:
+        image_cid = make_msgid(domain='avito.ru')
 
-    if content_type is None or encoding is not None:
-        content_type = 'application/octet-stream'
+        outbuf = BytesIO()
+        item['photo'].save(outbuf, format="PNG")
+        my_mime_image = MIMEImage(outbuf.getvalue())
+        my_mime_image.add_header('Content-ID', image_cid)
+        my_mime_image.add_header('Content-Disposition', 'inline', filename=image_cid)
+        outbuf.close()
+        message.attach(my_mime_image)
+        html += "<tr><td>{}</td><td>{}</td><td>{}</td><td><img src='cid:{}' /></td></tr>".format(item['title'],
+                                                                                               item['price'],
+                                                                                               item['metro'], image_cid)
+    html += "</table>"
+    msgHtml = MIMEText(html, 'html')
+    """
+    content_type = 'application/octet-stream'
     main_type, sub_type = content_type.split('/', 1)
     if main_type == 'text':
         fp = open(file, 'rb')
@@ -125,7 +143,8 @@ def createMessageWithAttachment(
         fp.close()
     filename = os.path.basename(file)
     msg.add_header('Content-Disposition', 'attachment', filename=filename)
-    message.attach(msg)
+    """
+    message.attach(msgHtml)
 
     return {'raw': base64.urlsafe_b64encode(message.as_string())}
 

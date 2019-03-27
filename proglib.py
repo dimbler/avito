@@ -5,15 +5,24 @@ import re
 from PIL import Image
 import requests
 from io import BytesIO
-import pandas as pd
+#import pandas as pd
 import base64
 import smtplib
 
 from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+from email.mime.text import MIMEText;
 from email.mime.image import MIMEImage
 
 from email.utils import make_msgid
+from sendmail import createMessageWithAttachment
+import validators
+
+HTTP_PROXY = 'http://zabbix.online-acq.local:8888'
+
+proxyDict = {
+              "http"  : HTTP_PROXY,
+              "https" : HTTP_PROXY
+}
 
 def dacha():
     data = []
@@ -30,7 +39,7 @@ def dacha():
     return  data
 
 
-def sendmail(me, you, list_items):
+def old_sendmail(me, you, list_items):
     # Create message container - the correct MIME type is multipart/alternative.
     msg = MIMEMultipart('related')
     msg['Subject'] = "Finded bicycles in AVITO"
@@ -63,6 +72,10 @@ def sendmail(me, you, list_items):
     #msg.attach(msgHtml)
     #msg.add_alternative(html, subtype='html')
 
+    import socks
+    socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS4, 'zabbix.online-acq.local', 8888)
+    socks.wrapmodule(smtplib)
+
     # Send the email (this example assumes SMTP authentication is required)
     mail = smtplib.SMTP('smtp.gmail.com', 587)
 
@@ -88,9 +101,16 @@ def get_total_pages(html):
 
 
 def get_file(url):
-    response = requests.get(url, stream=True)
-    img = Image.open(BytesIO(response.content))
-    return img
+    if validators.url(url):
+        try:
+            response = requests.get(url, stream=True)
+            img = Image.open(BytesIO(response.content))
+            return img
+        except Exception as exc:
+            return None
+    else:
+        return None
+
 
 def get_page_data(html):
     data = []
@@ -141,7 +161,7 @@ def get_page_data(html):
 
     return data
 
-pd.set_option('display.max_colwidth', -1)
+
 
 def get_thumbnail(path):
     i = Image.open(path)
@@ -176,10 +196,10 @@ def velo():
         #df = pd.DataFrame(list_items)
         #df.reset_index(drop=True)
         #html = df.to_html(formatters={'photo': image_formatter, 'price':str, 'title': str, 'metro':str, 'url':str }, escape=False)
-        sendmail('dimbler@gmail.com', 'dimbler@gmail.com', list_items)
+        old_sendmail('dimbler@gmail.com', 'dimbler@gmail.com', list_items)
         print (list_items)
 
 if __name__ == '__main__':
     list_dacha = dacha()
     if list_dacha:
-        sendmail('dimbler@gmail.com', 'dimbler@gmail.com', list_dacha)
+        createMessageWithAttachment('dimbler@gmail.com', 'dimbler@gmail.com', "Dacha", list_dacha)
