@@ -34,7 +34,7 @@ proxyDict = {
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument(dest='email', help='Path to configfile')
+    parser.add_argument(dest='list_emails', nargs='*', help='Path to configfile')
     return parser
 
 Base = declarative_base()
@@ -246,24 +246,25 @@ def velo():
         print (list_items)
     """
 
-def get_and_send(type_adverts, list_adverts, email_to_send):
+def get_and_send(type_adverts, list_adverts, emails_to_send):
     keys = [key for key in list_adverts.keys()]
     for key in keys:
         if check_db_data(key, list_adverts.get(key, {}).get('title', '')):
             list_adverts.pop(key)
 
     if list_adverts:
-        message = createMessageWithAttachment('dimbler@gmail.com', email_to_send, "Найденные {} на avito за {}".format(type_adverts, str(datetime.datetime.now())), list_adverts)
-        result = SendMessage('dimbler@gmail.com', email_to_send, "Найденные дачки на avito", message)
-        print (result)
+        for email_to_send in emails_to_send:
+            message = createMessageWithAttachment('dimbler@gmail.com', email_to_send, "Найденные {} на avito за {}".format(type_adverts, str(datetime.datetime.now())), list_adverts)
+            result = SendMessage('dimbler@gmail.com', email_to_send, "Найденные дачки на avito", message)
+            print (result)
 
 def main_avito(args):
 
-    if hasattr(args, 'email'):
-        email = args.email  
+    if hasattr(args, 'list_emails'):
+        list_emails = args.list_emails
 
-        get_and_send('велики', velo(), email)
-        get_and_send('дачки ', dacha(), email)
+        get_and_send('велики', velo(), list_emails)
+        get_and_send('дачки ', dacha(), list_emails)
 
 if __name__ == '__main__':
     main_avito(parse_arguments().parse_args())
