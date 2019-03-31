@@ -45,14 +45,10 @@ def get_credentials():
 
     return creds
 
-def SendMessage(sender, to, subject, msgPlain, attachmentFile=None):
+def SendMessage(sender, to, subject, msgEncoded):
     credentials = get_credentials()
     service = build('gmail', 'v1', credentials=credentials)
-    if attachmentFile:
-        message1 = createMessageWithAttachment(sender, to, subject, msgPlain, attachmentFile)
-    else:
-        message1 = CreateMessageHtml(sender, to, subject, msgPlain)
-    result = SendMessageInternal(service, "me", message1)
+    result = SendMessageInternal(service, "me", msgEncoded)
     return result
 
 def SendMessageInternal(service, user_id, message):
@@ -83,6 +79,11 @@ def CreateMessageHtml(sender, to, subject, msgPlain):
     message['subject'] = subject
     return {'raw': base64.urlsafe_b64encode(message.as_string().encode('UTF-8')).decode('ascii')}
 
+from random import choice
+import string
+def GenPasswd2(length=8, chars=string.ascii_letters + string.digits):
+    return ''.join([choice(chars) for i in range(length)])
+
 def createMessageWithAttachment(
         sender, to, subject, list_items):
     """Create a message for an email.
@@ -105,20 +106,21 @@ def createMessageWithAttachment(
     #msg = MIMEText(message_text)
     #message.attach(msg)
 
-    html = """<b>Finded bycles in AVITO <br><table>"""
-    for item in list_items:
-        image_cid = make_msgid(domain='avito.ru')
-
-        outbuf = BytesIO()
-        item['photo'].save(outbuf, format="PNG")
-        my_mime_image = MIMEImage(outbuf.getvalue())
-        my_mime_image.add_header('Content-ID', image_cid)
-        my_mime_image.add_header('Content-Disposition', 'inline', filename=image_cid)
-        outbuf.close()
-        message.attach(my_mime_image)
-        html += "<tr><td>{}</td><td>{}</td><td>{}</td><td><img src='cid:{}' /></td></tr>".format(item['title'],
-                                                                                               item['price'],
-                                                                                               item['metro'], image_cid)
+    html = """<b>{}</b></br></br><table border="1">""".format(subject)
+    for key, item in list_items.items():
+        try:
+            #image_cid = make_msgid(domain='avito.ru')
+            image_cid = GenPasswd2(8,string.digits)
+            outbuf = BytesIO()
+            item.get('photo', Image.new('RGB', (1, 1))).save(outbuf, format="PNG")
+            my_mime_image = MIMEImage(outbuf.getvalue(), 'png')
+            my_mime_image.add_header('Content-ID', "<{}>".format(image_cid))
+            my_mime_image.add_header('Content-Disposition', 'inline', filename=image_cid)
+            outbuf.close()
+            message.attach(my_mime_image)
+        except Exception as exc:
+            print ("Cannot attach picture {}".format(str(exc)))
+        html += "<tr><td><a href='{}'>{}</a></td><td>{}</td><td>{}</td><td><img src='cid:{}' /></td></tr>".format(key, item.get('title', ''),item.get('price', ''),item.get('metro', ''), image_cid)
     html += "</table>"
     msgHtml = MIMEText(html, 'html')
     """
@@ -146,7 +148,11 @@ def createMessageWithAttachment(
     """
     message.attach(msgHtml)
 
-    return {'raw': base64.urlsafe_b64encode(message.as_string())}
+    b64_bytes = base64.urlsafe_b64encode(message.as_bytes())
+    b64_string = b64_bytes.decode()
+    body = {'raw': b64_string}
+
+    return body
 
 
 def main():
